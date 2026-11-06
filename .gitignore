@@ -1,0 +1,21 @@
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Local data / secrets ---
+.env
+data/
+bin/
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Caddy ---
+caddy_data/
+caddy_config/

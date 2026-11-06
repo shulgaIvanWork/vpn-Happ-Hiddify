@@ -1,0 +1,43 @@
+services:
+  aggregator:
+    build: .
+    container_name: my-vpn-aggregator
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      SINGBOX_PATH: /usr/local/bin/sing-box
+    volumes:
+      - ./data:/data
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:8000:8000"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: my-vpn-caddy
+    restart: unless-stopped
+    profiles: ["edge"]
+    depends_on:
+      - aggregator
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

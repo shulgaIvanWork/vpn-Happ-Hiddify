@@ -1,0 +1,140 @@
+# Источники открытых прокси-конфигов.
+#
+# tier 1 - опрашиваются каждый полный скан (раз в час)
+# tier 2 - опрашиваются раз в сутки
+#
+# max_bytes - жёсткий лимит на размер ответа (защита от гигантских файлов)
+
+max_bytes: 8388608
+
+# Префиксы-зеркала для raw.githubusercontent.com (пробуются по порядку).
+# Оставьте пустым, если GitHub raw доступен напрямую.
+mirrors: []
+
+sources:
+  # --- tier 1: основные ---
+  - name: rjsxrd-bypass-all
+    url: https://raw.githubusercontent.com/whoahaow/rjsxrd/main/githubmirror/bypass/bypass-all.txt
+    tier: 1
+
+  - name: rjsxrd-servers
+    url: https://raw.githubusercontent.com/whoahaow/rjsxrd/main/source/config/servers.txt
+    tier: 1
+
+  - name: openray-valid
+    url: https://raw.githubusercontent.com/sakha1370/OpenRay/refs/heads/main/output/all_valid_proxies.txt
+    tier: 1
+
+  - name: proxy-minging
+    url: https://raw.githubusercontent.com/yitong2333/proxy-minging/refs/heads/main/v2ray.txt
+    tier: 1
+
+  - name: autovpn-v2
+    url: https://raw.githubusercontent.com/acymz/AutoVPN/refs/heads/main/data/V2.txt
+    tier: 1
+
+  - name: roosterkid-v2ray
+    url: https://raw.githubusercontent.com/roosterkid/openproxylist/main/V2RAY_RAW.txt
+    tier: 1
+
+  - name: mohamadfg-vless
+    url: https://raw.githubusercontent.com/mohamadfg-dev/telegram-v2ray-configs-collector/refs/heads/main/category/vless.txt
+    tier: 1
+
+  - name: mohamadfg-vmess
+    url: https://raw.githubusercontent.com/mohamadfg-dev/telegram-v2ray-configs-collector/refs/heads/main/category/vmess.txt
+    tier: 1
+
+  - name: mohamadfg-trojan
+    url: https://raw.githubusercontent.com/mohamadfg-dev/telegram-v2ray-configs-collector/refs/heads/main/category/trojan.txt
+    tier: 1
+
+  - name: kwinshadow-mix
+    url: https://raw.githubusercontent.com/Kwinshadow/TelegramV2rayCollector/refs/heads/main/sublinks/mix.txt
+    tier: 1
+
+  - name: lalatinahub-nodes
+    url: https://raw.githubusercontent.com/LalatinaHub/Mineral/refs/heads/master/result/nodes
+    tier: 1
+
+  - name: pawdroid-sub
+    url: https://raw.githubusercontent.com/Pawdroid/Free-servers/refs/heads/main/sub
+    tier: 1
+
+  - name: epodonios-all
+    url: https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/All_Configs_Sub.txt
+    tier: 1
+    enabled: false
+
+  - name: barry-far-all
+    url: https://raw.githubusercontent.com/barry-far/V2ray-Config/refs/heads/main/All_Configs_Sub.txt
+    tier: 1
+
+  - name: mahdibland-merge
+    url: https://raw.githubusercontent.com/mahdibland/V2RayAggregator/refs/heads/master/sub/sub_merge.txt
+    tier: 1
+
+  - name: matinghanbari-all
+    url: https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/v2ray/all_sub.txt
+    tier: 1
+
+  - name: wuqb2i4f-mix
+    url: https://raw.githubusercontent.com/wuqb2i4f/xray-config-toolkit/main/output/base64/mix-uri
+    tier: 1
+
+  # --- tier 2: длинный хвост, раз в сутки ---
+  - name: mheidari98-all
+    url: https://raw.githubusercontent.com/mheidari98/.proxy/refs/heads/main/all
+    tier: 2
+
+  - name: youfoundamin-mixed
+    url: https://raw.githubusercontent.com/youfoundamin/V2rayCollector/main/mixed_iran.txt
+    tier: 2
+
+  - name: mhditaheri-mix
+    url: https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector_Py/refs/heads/main/sub/Mix/mix.txt
+    tier: 2
+
+  - name: argh94-all
+    url: https://raw.githubusercontent.com/Argh94/Proxy-List/refs/heads/main/All_Config.txt
+    tier: 2
+
+  - name: argh94-hysteria2
+    url: https://raw.githubusercontent.com/Argh94/V2RayAutoConfig/refs/heads/main/configs/Hysteria2.txt
+    tier: 2
+
+  - name: 4n0nymou3-proxies
+    url: https://raw.githubusercontent.com/4n0nymou3/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt
+    tier: 2
+
+  - name: azadnet
+    url: https://raw.githubusercontent.com/AzadNetCH/Clash/refs/heads/main/AzadNet.txt
+    tier: 2
+
+  - name: v2rayroot-vless
+    url: https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt
+    tier: 2
+
+  - name: f0rc3run-best
+    url: https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/Best-Results/proxies.txt
+    tier: 2
+
+  - name: surfboard-tg
+    url: https://raw.githubusercontent.com/Surfboardv2ray/TGParse/refs/heads/main/configtg.txt
+    tier: 2
+
+  - name: mosifree-reality
+    url: https://raw.githubusercontent.com/Mosifree/-FREE2CONFIG/refs/heads/main/Reality
+    tier: 2
+
+  - name: barabama-nodes
+    url: https://raw.githubusercontent.com/Barabama/FreeNodes/main/nodes/nodev2ray.txt
+    tier: 2
+
+  - name: nirevil-vless
+    url: https://raw.githubusercontent.com/NiREvil/vless/main/sub/SSTime
+    tier: 2
+
+  - name: yasserdivar-ss
+    url: https://raw.githubusercontent.com/YasserDivaR/pr0xy/refs/heads/main/ShadowSocks2021.txt
+    tier: 2
