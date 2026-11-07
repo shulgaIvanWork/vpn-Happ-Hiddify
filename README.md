@@ -180,7 +180,7 @@ ufw enable
 ```bash
 scp .env.example root@<IP>:/opt/my-vpn/.env
 # на сервере отредактируйте /opt/my-vpn/.env: DOMAIN, SUB_TOKEN, ADMIN_TOKEN
-./scripts/deploy_moscow.sh root@<IP>
+bash scripts/deploy_moscow.sh root@<IP>
 ```
 
 Скрипт копирует проект (без `.env`, `data`, `.venv`), создаёт `data`, выставляет владельца `10001` и запускает `docker compose --profile edge up -d --build`.
@@ -198,7 +198,7 @@ docker compose logs -f aggregator
 ### 4. Обновление
 
 ```bash
-./scripts/deploy_moscow.sh root@<IP>
+bash scripts/deploy_moscow.sh root@<IP>
 ```
 
 ---
