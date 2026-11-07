@@ -235,6 +235,19 @@ def build_xray_config(nodes: list[Node]) -> dict[str, Any] | None:
     }
 
 
+def _happ_allowed(node: Node) -> bool:
+    """Happ refuses JSON profiles whose outbounds are not TLS/REALITY.
+
+    It also takes the first outbound as the profile's protocol label, so a
+    leading Shadowsocks outbound makes the whole profile look unencrypted.
+    """
+    if node.protocol not in ("vless", "vmess", "trojan"):
+        return False
+    if str(node.params.get("security") or "none").lower() not in ("tls", "reality"):
+        return False
+    return not node.params.get("insecure")
+
+
 def build_happ_subscription(nodes: list[Node]) -> list[dict[str, Any]] | None:
     """Happ JSON subscription with client-side automatic failover.
 
@@ -243,10 +256,14 @@ def build_happ_subscription(nodes: list[Node]) -> list[dict[str, Any]] | None:
     and switch to a working node even when one of them dies after import.
     Inbounds are intentionally omitted: Happ injects its own tunnel inbound.
     """
-    config = build_xray_config(nodes)
+    allowed = [node for node in nodes if _happ_allowed(node)]
+    config = build_xray_config(allowed)
     if config is None:
         return None
     config.pop("inbounds", None)
+    config["outbounds"] = [
+        outbound for outbound in config["outbounds"] if outbound.get("tag") not in ("direct", "block")
+    ]
     return [
         {
             "remarks": "Moscow Auto",

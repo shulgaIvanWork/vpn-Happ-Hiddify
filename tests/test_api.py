@@ -99,6 +99,9 @@ def test_happ_subscription_is_json_array_with_failover(client):
     config = configs[0]
     assert config["remarks"]
     assert "inbounds" not in config
+    tags = [outbound["tag"] for outbound in config["outbounds"]]
+    assert "direct" not in tags and "block" not in tags
+    assert config["outbounds"][0]["streamSettings"]["security"] in ("tls", "reality")
     assert config["routing"]["balancers"][0]["strategy"]["type"] == "leastPing"
     assert config["observatory"]["probeUrl"]
     rule = config["routing"]["rules"][0]
