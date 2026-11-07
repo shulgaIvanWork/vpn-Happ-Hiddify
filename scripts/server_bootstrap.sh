@@ -50,12 +50,12 @@ if [ ! -f .env ]; then
   SUB_TOKEN="$(openssl rand -hex 24)"
   ADMIN_TOKEN="$(openssl rand -hex 24)"
   cat > .env <<EOF
-DOMAIN=${DOMAIN}
+DOMAIN="${DOMAIN}"
 BIND_ADDR=127.0.0.1
 SUB_TOKEN=${SUB_TOKEN}
 ADMIN_TOKEN=${ADMIN_TOKEN}
-PROFILE_TITLE=Moscow Auto-VPN
-SUPPORT_URL=https://t.me/your_channel
+PROFILE_TITLE="Moscow Auto-VPN"
+SUPPORT_URL="https://t.me/your_channel"
 TOTAL_BYTES=322122547200
 EXPIRE_UNIX=1893456000
 NODES_IN_SUB=35
