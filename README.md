@@ -163,29 +163,31 @@ python -c "import secrets;print(secrets.token_urlsafe(32))"
 
 ### 2. Сервер
 
-```bash
-apt update && apt install -y docker.io docker-compose-plugin rsync ufw
-ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
-```
-
-Минимум: 1 vCPU / 1 GB. Рекомендуется 2 vCPU / 2 GB.
-
-### 3. Загрузка и запуск
-
-С локальной машины (Git Bash / WSL / Linux):
+Ubuntu/Debian, root. Docker ставится автоматически:
 
 ```bash
-scp .env.example root@<IP>:/opt/my-vpn/.env
-# на сервере отредактируйте /opt/my-vpn/.env: DOMAIN, SUB_TOKEN, ADMIN_TOKEN
-bash scripts/deploy_moscow.sh root@<IP>
+apt update && apt install -y git
+git clone https://github.com/shulgaIvanWork/vpn-Happ-Hiddify.git /opt/my-vpn
+cd /opt/my-vpn
+DOMAIN=vpn.example.com bash scripts/server_bootstrap.sh
 ```
 
-Скрипт копирует проект (без `.env`, `data`, `.venv`), создаёт `data`, выставляет владельца `10001` и запускает `docker compose --profile edge up -d --build`.
+Если домена пока нет, можно сразу поднять HTTPS на `sslip.io`:
 
-Проверка:
+```bash
+DOMAIN=185-17-0-143.sslip.io bash scripts/server_bootstrap.sh
+```
+
+`server_bootstrap.sh` ставит Docker + compose, создаёт `.env` со случайными
+`SUB_TOKEN`/`ADMIN_TOKEN`, поднимает агрегатор и Caddy и ждёт `/healthz`.
+
+Токен подписки:
+
+```bash
+grep '^SUB_TOKEN=' /opt/my-vpn/.env
+```
+
+### 3. Проверка
 
 ```bash
 curl -I https://vpn.example.com/sub/<TOKEN>
@@ -193,13 +195,31 @@ curl https://vpn.example.com/readyz
 docker compose logs -f aggregator
 ```
 
-Первый скан занимает 1–7 минут в зависимости от `MAX_NODES_PER_SCAN` и качества канала.
+Первый скан занимает 3–7 минут в зависимости от `MAX_NODES_PER_SCAN` и качества канала.
 
 ### 4. Обновление
 
 ```bash
+cd /opt/my-vpn
+git pull --ff-only
+docker compose --profile edge up -d --build
+```
+
+Альтернатива с локальной машины (нужен `rsync`):
+
+```bash
 bash scripts/deploy_moscow.sh root@<IP>
 ```
+
+### 5. Смена домена
+
+```bash
+cd /opt/my-vpn
+sed -i 's|^DOMAIN=.*|DOMAIN=vpn.example.com|' .env
+docker compose --profile edge up -d
+```
+
+Caddy сам перевыпустит сертификат после обновления DNS.
 
 ---
 
