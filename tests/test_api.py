@@ -90,6 +90,22 @@ def test_xray_subscription(client):
     assert config["routing"]["balancers"][0]["strategy"]["type"] == "leastPing"
 
 
+def test_happ_subscription_is_json_array_with_failover(client):
+    _seed(client)
+    response = client.get("/sub/test-sub/happ")
+    assert response.status_code == 200
+    configs = response.json()
+    assert isinstance(configs, list) and len(configs) == 1
+    config = configs[0]
+    assert config["remarks"]
+    assert "inbounds" not in config
+    assert config["routing"]["balancers"][0]["strategy"]["type"] == "leastPing"
+    assert config["observatory"]["probeUrl"]
+    rule = config["routing"]["rules"][0]
+    assert rule["balancerTag"] == "auto"
+    assert "inboundTag" not in rule
+
+
 def test_info_and_page_and_qr(client):
     _seed(client)
     info = client.get("/sub/test-sub/info")

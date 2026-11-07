@@ -23,7 +23,7 @@ from app.scheduler import Aggregator
 from app.security import RateLimiter, token_matches
 from app.singbox import build_subscription_config
 from app.store import Store
-from app.xray import build_xray_config
+from app.xray import build_happ_subscription, build_xray_config
 
 log = logging.getLogger(__name__)
 
@@ -216,6 +216,24 @@ async def subscription_xray(request: Request, token: str) -> Response:
     return Response(content=json.dumps(config, ensure_ascii=False, indent=2), headers=headers, media_type=None)
 
 
+@app.get("/sub/{token}/happ")
+async def subscription_happ(request: Request, token: str) -> Response:
+    if not _validate_sub_token(request, token):
+        return JSONResponse({"detail": "Forbidden"}, status_code=403)
+    store: Store = request.app.state.store
+    settings = _settings(request)
+    live = store.top(settings.nodes_in_sub, settings.max_nodes_per_subnet)
+    if not live:
+        return _no_nodes_response()
+
+    configs = build_happ_subscription([item.node for item in live])
+    if configs is None:
+        return _no_nodes_response()
+    headers = subscription_headers(settings, "application/json; charset=utf-8")
+    headers["Content-Disposition"] = 'attachment; filename="happ.json"'
+    return Response(content=json.dumps(configs, ensure_ascii=False, indent=2), headers=headers, media_type=None)
+
+
 @app.get("/sub/{token}/info")
 async def subscription_meta(request: Request, token: str) -> JSONResponse:
     if not _validate_sub_token(request, token):
@@ -229,6 +247,7 @@ async def subscription_meta(request: Request, token: str) -> JSONResponse:
         "base64": f"{base}/sub/{token}",
         "singbox": f"{base}/sub/{token}/singbox",
         "xray": f"{base}/sub/{token}/xray",
+        "happ": f"{base}/sub/{token}/happ",
     }
     return JSONResponse(data)
 
@@ -271,6 +290,7 @@ td,th{{border-bottom:1px solid #eee;padding:6px 8px;text-align:left;font-size:14
 <p><img src="{base}/qr/{token}.svg" alt="QR" width="220" height="220"></p>
 <ul>
 <li>Happ / v2rayNG / Streisand: <code>{sub_url}</code></li>
+<li>Happ с автопереключением (JSON): <code>{sub_url}/happ</code></li>
 <li>Hiddify / sing-box: <code>{sub_url}/singbox</code></li>
 <li>Happ (Xray JSON): <code>{sub_url}/xray</code></li>
 </ul>

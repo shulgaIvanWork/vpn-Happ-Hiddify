@@ -78,6 +78,7 @@ python -m app.cli fetch --tiers 1
 |---|---|---|
 | `/sub/{token}` | base64-список URI | Happ, v2rayNG, Streisand, универсальный |
 | `/sub/{token}/singbox` | JSON + `urltest` | Hiddify, Karing, sing-box |
+| `/sub/{token}/happ` | JSON-массив + `balancer`/`observatory` | Happ с автопереключением |
 | `/sub/{token}/xray` | Xray JSON + balancer | Happ (если импортирует JSON-профиль) |
 | `/sub/{token}/info` | JSON | статистика без секретов |
 | `/p/{token}` | HTML | личная страница: ссылка, QR, топ нод |
@@ -105,7 +106,9 @@ Support-Url: https://t.me/...
 
 1. Добавить профиль → «Из ссылки» → вставить `https://<домен>/sub/<token>`.
 2. Обновление раз в час придёт автоматически.
-3. Для автопереключения: попробуйте `/sub/<token>/xray` (Xray JSON с `observatory` + `balancer`). Конфиг проверен ядром Xray 26.
+3. Для автопереключения: `https://<домен>/sub/<token>/happ` — Happ передаёт этот JSON ядру Xray как есть, а внутри `observatory` каждую минуту проверяет ноды из сети пользователя и `balancer` (`leastPing`) переключается на живую.
+
+Важно: обычный base64-список Happ **не** переключает автоматически — это формат «список серверов», выбор ручной. Автопереключение возможно только в JSON-профиле `/happ` или в Hiddify с `/singbox`.
 
 Если конкретная версия Happ не принимает JSON, используйте base64-ссылку: список уже отсортирован по скорости и содержит только живые ноды.
 

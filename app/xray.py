@@ -225,10 +225,32 @@ def build_xray_config(nodes: list[Node]) -> dict[str, Any] | None:
             "balancers": [balancer],
             "rules": [
                 {
+                    # No inboundTag: matches whatever inbound the client injects.
                     "type": "field",
-                    "inboundTag": ["socks-in", "http-in"],
+                    "network": "tcp,udp",
                     "balancerTag": "auto",
                 }
             ],
         },
     }
+
+
+def build_happ_subscription(nodes: list[Node]) -> list[dict[str, Any]] | None:
+    """Happ JSON subscription with client-side automatic failover.
+
+    Happ passes JSON configs to the Xray core unchanged, so the balancer and
+    observatory below keep probing every outbound from the user's own network
+    and switch to a working node even when one of them dies after import.
+    Inbounds are intentionally omitted: Happ injects its own tunnel inbound.
+    """
+    config = build_xray_config(nodes)
+    if config is None:
+        return None
+    config.pop("inbounds", None)
+    return [
+        {
+            "remarks": "Moscow Auto",
+            "meta": {"serverDescription": "auto-failover"},
+            **config,
+        }
+    ]
