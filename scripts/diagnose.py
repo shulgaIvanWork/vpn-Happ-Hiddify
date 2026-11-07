@@ -11,8 +11,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import httpx
-
 from app import singbox
 from app.models import Node
 from app.parsers import parse_uri
