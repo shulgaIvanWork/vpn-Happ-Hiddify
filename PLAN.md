@@ -99,7 +99,7 @@ GitHub raw (rjsxrd bypass-all, servers.txt, ~N upstream)
 ### 3.5 Subscription renderer
 | Endpoint | Формат | Для кого |
 |---|---|---|
-| `/sub/{token}` | base64 список URI | v2rayNG, Streisand, универсальный |
+| `/sub/{token}` | base64 список URI | Hiddify (основной), v2rayNG, Streisand, универсальный |
 | `/sub/{token}/singbox` | JSON + `urltest` | Hiddify, Karing, sing-box, Streisand |
 | `/sub/{token}/xray` | Xray JSON + observatory/balancer | v2rayN / Xray-ядро |
 

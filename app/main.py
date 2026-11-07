@@ -270,8 +270,8 @@ td,th{{border-bottom:1px solid #eee;padding:6px 8px;text-align:left;font-size:14
 <p>Ссылка подписки:<br><code>{sub_url}</code></p>
 <p><img src="{base}/qr/{token}.svg" alt="QR" width="220" height="220"></p>
 <ul>
-<li><b>Hiddify / sing-box</b> (автопереключение): <code>{sub_url}/singbox</code></li>
-<li>v2rayNG / Streisand (список): <code>{sub_url}</code></li>
+<li><b>Hiddify</b> (список + режим «Auto»): <code>{sub_url}</code></li>
+<li>sing-box CLI / Karing: <code>{sub_url}/singbox</code></li>
 <li>Xray JSON: <code>{sub_url}/xray</code></li>
 </ul>
 <table><thead><tr><th>Нода</th><th>Пинг</th><th>Протокол</th></tr></thead>

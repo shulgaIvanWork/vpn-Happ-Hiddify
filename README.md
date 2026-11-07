@@ -22,7 +22,7 @@ GitHub raw (rjsxrd + upstream)
                           ┌─────────────────────────────┤
                           ▼                             ▼
                  /sub/{token}                  /sub/{token}/singbox
-                 base64 (v2rayNG и др.)        JSON urltest (Hiddify) — основной
+                 base64 (Hiddify, v2rayNG)     JSON urltest (sing-box CLI)
                  /sub/{token}/xray             Xray JSON (v2rayN/Streisand)
 ```
 
@@ -76,8 +76,8 @@ python -m app.cli fetch --tiers 1
 
 | Путь | Формат | Назначение |
 |---|---|---|
-| `/sub/{token}` | base64-список URI | v2rayNG, Streisand, универсальный |
-| `/sub/{token}/singbox` | JSON + `urltest` | **Hiddify (основной)**, Karing, sing-box |
+| `/sub/{token}` | base64-список URI | **Hiddify (основной)**, v2rayNG, Streisand |
+| `/sub/{token}/singbox` | JSON + `urltest` | sing-box CLI, Karing |
 | `/sub/{token}/xray` | Xray JSON + balancer | v2rayN / Streisand / Xray-ядро |
 | `/sub/{token}/info` | JSON | статистика без секретов |
 | `/p/{token}` | HTML | личная страница: ссылка, QR, топ нод |
@@ -103,11 +103,18 @@ Support-Url: https://t.me/...
 
 ### Hiddify (основной клиент)
 
-1. Добавить подписку → вставить `https://<домен>/sub/<token>/singbox`.
-2. Внутри группа `urltest` (`auto`): интервал проверки 1 минута, `tolerance: 50ms` — трафик сам переключается на живую быструю ноду.
-3. Обновление подписки — раз в час (`Profile-Update-Interval: 1`).
+1. Добавить подписку → вставить **обычную** ссылку `https://<домен>/sub/<token>` (без `/singbox`).
+2. Hiddify покажет все 35 серверов и построит свои группы `select`/`auto`.
+3. На экране прокси выберите **Auto** — это `urltest`: раз в минуту проверяет серверы и переключается на живой.
+4. Обновление подписки — раз в час (`Profile-Update-Interval: 1`).
 
-Дополнительно Hiddify понимает заголовки `Profile-Title`, `Subscription-Userinfo` и `Support-Url`, поэтому в профиле видны название, полоса трафика и ссылка на Telegram.
+Ссылку `/sub/<token>/singbox` в Hiddify добавлять **не нужно**: это готовый конфиг для sing-box CLI, и Hiddify показывает его как один «Server 1», конфликтуя со своими служебными группами.
+
+Заголовки `Profile-Title`, `Subscription-Userinfo` и `Support-Url` Hiddify понимает — в профиле видны название, полоса трафика и ссылка на Telegram.
+
+### sing-box CLI / Karing
+
+`https://<домен>/sub/<token>/singbox` — JSON с `urltest` (`auto`), интервал проверки 1 минута, `tolerance: 50ms`.
 
 ### v2rayNG / Streisand
 
