@@ -11,6 +11,7 @@ from .common import (
     b64_decoded_len,
     clean_remark,
     is_hex,
+    is_valid_path,
     normalize_fingerprint,
     query_dict,
     safe_urlparse,
@@ -68,6 +69,8 @@ def parse(uri: str) -> Node | None:
     host_header = q.get("host") or ""
     sni = q.get("sni") or host_header or parsed.hostname
     path = q.get("path") or "/"
+    if not is_valid_path(path):
+        return None
     service_name = q.get("serviceName") or q.get("service_name") or ""
     if network == "grpc" and not service_name:
         service_name = path.strip("/") or ""

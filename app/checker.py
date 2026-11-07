@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import socket
 import ssl
 import tempfile
@@ -33,20 +34,21 @@ class ProbeHttpError(RuntimeError):
         self.status = status
 
 
-def _allocate_ports(count: int) -> list[int]:
-    """Ask the OS for free loopback ports (avoids clashes with stale processes)."""
-    sockets: list[socket.socket] = []
+def _pick_ports(count: int, base: int) -> list[int]:
+    """Pick free loopback ports from a dedicated (non-ephemeral) range."""
     ports: list[int] = []
-    try:
-        for _ in range(count):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(("127.0.0.1", 0))
-            ports.append(int(sock.getsockname()[1]))
-            sockets.append(sock)
-    finally:
-        for sock in sockets:
+    port = base
+    while len(ports) < count and port < 49000:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            port += 1
+            continue
+        finally:
             sock.close()
+        ports.append(port)
+        port += 1
     return ports
 
 
@@ -64,6 +66,14 @@ def _classify_error(exc: BaseException) -> str:
     if isinstance(exc, OSError):
         return "network"
     return type(exc).__name__.lower()
+
+
+_OUTBOUND_ERROR_RE = re.compile(r"outbound\[(\d+)\]")
+
+
+def _outbound_error_index(stderr: str) -> int | None:
+    match = _OUTBOUND_ERROR_RE.search(stderr)
+    return int(match.group(1)) if match else None
 
 
 def _status_code(head: bytes) -> int:
@@ -95,16 +105,24 @@ class Checker:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.singbox_path = settings.singbox_path
+        self._scan_slot = 0
+
+    def _next_port_base(self) -> int:
+        span = max(1, (49_000 - self.settings.port_base) // self.settings.port_band)
+        base = self.settings.port_base + (self._scan_slot % span) * self.settings.port_band
+        self._scan_slot += 1
+        return base
 
     async def check_many(self, nodes: list[Node]) -> list[CheckResult]:
         results: list[CheckResult] = []
         batch_size = self.settings.batch_size
+        port_base = self._next_port_base()
         for batch_index, start in enumerate(range(0, len(nodes), batch_size)):
             batch = nodes[start : start + batch_size]
             if not batch:
                 continue
             started = time.monotonic()
-            batch_results = await self._check_batch_with_fallback(batch)
+            batch_results = await self._check_batch_with_fallback(batch, port_base + start)
             alive = sum(1 for result in batch_results if result.ok)
             log.info(
                 "Batch %d: %d/%d alive in %.1fs",
@@ -116,95 +134,146 @@ class Checker:
             results.extend(batch_results)
         return results
 
-    async def _check_batch_with_fallback(self, nodes: list[Node]) -> list[CheckResult]:
+    async def _check_batch_with_fallback(
+        self, nodes: list[Node], base: int
+    ) -> list[CheckResult]:
         if not nodes:
             return []
-        result = await self._run_batch(nodes)
+        result = await self._run_batch(nodes, base)
         if result is not None:
             return result
         log.warning("sing-box rejected config for %d nodes, splitting", len(nodes))
         if len(nodes) == 1:
             return [CheckResult(node=nodes[0], ok=False, error="invalid-config")]
         middle = len(nodes) // 2
-        left = await self._check_batch_with_fallback(nodes[:middle])
-        right = await self._check_batch_with_fallback(nodes[middle:])
+        left = await self._check_batch_with_fallback(nodes[:middle], base)
+        right = await self._check_batch_with_fallback(nodes[middle:], base)
         return left + right
 
-    async def _run_batch(self, nodes: list[Node]) -> list[CheckResult] | None:
+    async def _run_batch(self, nodes: list[Node], base: int) -> list[CheckResult] | None:
+        remaining = list(nodes)
         for attempt in range(2):
-            ports = _allocate_ports(len(nodes))
-            built = singbox.build_check_config(nodes, ports)
-            if built is None:
-                return None
-            config, port_map = built
-
-            handle, config_path = tempfile.mkstemp(prefix="sb-check-", suffix=".json")
-            process: asyncio.subprocess.Process | None = None
-            try:
-                with os.fdopen(handle, "w", encoding="utf-8") as file:
-                    json.dump(config, file, ensure_ascii=False)
-                process = await asyncio.create_subprocess_exec(
-                    self.singbox_path,
-                    "run",
-                    "-c",
-                    config_path,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                ready = await self._wait_ready(process, [port for port, _ in port_map])
-                if not ready:
-                    if attempt == 0:
-                        log.warning("Batch of %d did not start, retrying on new ports", len(nodes))
-                        continue
+            while remaining:
+                ports = _pick_ports(len(remaining), base + attempt * self.settings.port_band)
+                if len(ports) < len(remaining):
+                    log.warning("Not enough free ports for %d nodes", len(remaining))
                     return None
+                built = singbox.build_check_config(remaining, ports)
+                if built is None:
+                    return None
+                config, port_map = built
 
-                semaphore = asyncio.Semaphore(self.settings.probe_concurrency)
-
-                async def probe(
-                    port: int, node: Node, semaphore: asyncio.Semaphore = semaphore
-                ) -> CheckResult:
-                    async with semaphore:
-                        return await self._probe(port, node)
-
-                tasks = [probe(port, node) for port, node in port_map]
+                handle, config_path = tempfile.mkstemp(prefix="sb-check-", suffix=".json")
+                process: asyncio.subprocess.Process | None = None
                 try:
-                    return await asyncio.wait_for(
-                        asyncio.gather(*tasks),
-                        timeout=self.settings.check_timeout + 15.0,
+                    with os.fdopen(handle, "w", encoding="utf-8") as file:
+                        json.dump(config, file, ensure_ascii=False)
+
+                    valid, error = await self._check_config(config_path)
+                    if not valid:
+                        index = _outbound_error_index(error)
+                        if index is None or not (1 <= index <= len(port_map)):
+                            log.warning("Config check failed: %s", error.strip()[-300:])
+                            return None
+                        bad_node = port_map[index - 1][1]
+                        log.warning(
+                            "Excluding invalid %s node %s:%s",
+                            bad_node.protocol,
+                            bad_node.host,
+                            bad_node.port,
+                        )
+                        remaining = [node for node in remaining if node is not bad_node]
+                        continue
+
+                    process = await asyncio.create_subprocess_exec(
+                        self.singbox_path,
+                        "run",
+                        "-c",
+                        config_path,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
                     )
-                except TimeoutError:
-                    return [
-                        CheckResult(node=node, ok=False, error="batch-timeout")
-                        for _, node in port_map
-                    ]
-            finally:
-                if process is not None:
-                    await self._stop(process)
-                try:
-                    Path(config_path).unlink(missing_ok=True)
-                except OSError:
-                    pass
+                    ready = await self._wait_ready(process, [port for port, _ in port_map])
+                    if not ready:
+                        log.warning(
+                            "Batch of %d did not start, retrying on new ports", len(remaining)
+                        )
+                        break
+
+                    semaphore = asyncio.Semaphore(self.settings.probe_concurrency)
+
+                    async def probe(
+                        port: int, node: Node, semaphore: asyncio.Semaphore = semaphore
+                    ) -> CheckResult:
+                        async with semaphore:
+                            return await self._probe(port, node)
+
+                    tasks = [probe(port, node) for port, node in port_map]
+                    try:
+                        return await asyncio.wait_for(
+                            asyncio.gather(*tasks),
+                            timeout=self.settings.check_timeout + 15.0,
+                        )
+                    except TimeoutError:
+                        return [
+                            CheckResult(node=node, ok=False, error="batch-timeout")
+                            for _, node in port_map
+                        ]
+                finally:
+                    if process is not None:
+                        await self._stop(process)
+                    try:
+                        Path(config_path).unlink(missing_ok=True)
+                    except OSError:
+                        pass
         return None
+
+    async def _check_config(self, config_path: str) -> tuple[bool, str]:
+        try:
+            process = await asyncio.create_subprocess_exec(
+                self.singbox_path,
+                "check",
+                "-c",
+                config_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except OSError as exc:
+            return False, str(exc)
+        try:
+            _, stderr = await asyncio.wait_for(process.communicate(), timeout=15.0)
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+            return False, "config check timeout"
+        return process.returncode == 0, stderr.decode("utf-8", "replace")
 
     async def _wait_ready(
         self, process: asyncio.subprocess.Process, ports: list[int]
     ) -> bool:
-        remaining = set(ports)
+        if not ports:
+            return False
+        # sing-box binds inbounds in order, so the last port is the last to appear.
+        # A short per-attempt timeout prevents hangs on half-open loopback sockets.
         deadline = time.monotonic() + 3.0
-        while remaining and time.monotonic() < deadline:
+        await asyncio.sleep(0.2)
+        while time.monotonic() < deadline:
             if process.returncode is not None:
                 return False
-            for port in list(remaining):
-                try:
-                    reader, writer = await asyncio.open_connection("127.0.0.1", port)
+            writer = None
+            try:
+                async with asyncio.timeout(0.5):
+                    reader, writer = await asyncio.open_connection("127.0.0.1", ports[-1])
+                writer.close()
+                del reader
+                return True
+            except (OSError, TimeoutError):
+                if writer is not None:
                     writer.close()
-                    del reader
-                    remaining.discard(port)
-                except OSError:
-                    continue
-            if remaining:
-                await asyncio.sleep(0.05)
-        return not remaining
+                if process.returncode is not None:
+                    return False
+                await asyncio.sleep(0.1)
+        return False
 
     async def _probe(self, port: int, node: Node) -> CheckResult:
         started = time.monotonic()

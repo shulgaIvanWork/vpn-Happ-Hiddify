@@ -8,6 +8,8 @@ Caddyfile text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
 *.md text eol=lf
+.env.example text eol=lf
+.gitattributes text eol=lf
 
 # PowerShell scripts are happiest with CRLF.
 *.ps1 text eol=crlf

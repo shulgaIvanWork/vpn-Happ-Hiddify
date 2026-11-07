@@ -44,7 +44,6 @@ def _stream_settings(node: Node) -> dict[str, Any] | None:
         stream["security"] = "tls"
         tls_settings: dict[str, Any] = {
             "serverName": sni,
-            "allowInsecure": bool(p.get("insecure")),
             "fingerprint": fingerprint,
         }
         if p.get("alpn"):
@@ -83,6 +82,11 @@ def build_xray_outbound(node: Node) -> dict[str, Any] | None:
     p = node.params
     tag = node.tag
     protocol = node.protocol
+
+    security = str(p.get("security") or "none").lower()
+    if security == "tls" and p.get("insecure"):
+        # Xray 26 removed allowInsecure; self-signed nodes cannot work there.
+        return None
 
     if protocol == "vless":
         security = str(p.get("security") or "none").lower()
@@ -158,8 +162,9 @@ def build_xray_outbound(node: Node) -> dict[str, Any] | None:
         return None
 
     stream = _stream_settings(node)
-    if stream:
-        outbound["streamSettings"] = stream
+    if stream is None:
+        return None
+    outbound["streamSettings"] = stream
     return outbound
 
 

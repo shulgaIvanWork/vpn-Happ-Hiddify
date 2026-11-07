@@ -6,6 +6,15 @@ import re
 from urllib.parse import unquote, urlparse
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+_BAD_PERCENT = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_PATH_CONTROL = re.compile(r"[\x00-\x20\x7f]")
+
+
+def is_valid_path(path: str) -> bool:
+    """Reject WS/HTTP paths with broken percent escapes or raw control chars."""
+    if not path:
+        return False
+    return not _BAD_PERCENT.search(path) and not _PATH_CONTROL.search(path)
 
 UTLS_FINGERPRINTS = {
     "chrome",

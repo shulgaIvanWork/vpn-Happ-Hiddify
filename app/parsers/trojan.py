@@ -4,7 +4,17 @@ from urllib.parse import unquote
 
 from app.models import Node
 
-from .common import alpn_list, as_bool, normalize_fingerprint, query_dict, safe_urlparse, split_uri
+from .common import (
+    alpn_list,
+    as_bool,
+    b64_decoded_len,
+    is_hex,
+    is_valid_path,
+    normalize_fingerprint,
+    query_dict,
+    safe_urlparse,
+    split_uri,
+)
 
 
 def parse(uri: str) -> Node | None:
@@ -40,9 +50,18 @@ def parse(uri: str) -> Node | None:
     host_header = q.get("host") or ""
     sni = q.get("sni") or host_header or parsed.hostname
     path = q.get("path") or "/"
+    if not is_valid_path(path):
+        return None
     service_name = q.get("serviceName") or q.get("service_name") or ""
     if network == "grpc" and not service_name:
         service_name = path.strip("/") or ""
+
+    short_id = q.get("sid") or ""
+    if short_id and (len(short_id) > 16 or len(short_id) % 2 or not is_hex(short_id)):
+        short_id = ""
+    public_key = q.get("pbk") or ""
+    if security == "reality" and b64_decoded_len(public_key) != 32:
+        return None
 
     params: dict[str, object] = {
         "network": network,
@@ -52,6 +71,8 @@ def parse(uri: str) -> Node | None:
         "path": path,
         "service_name": service_name,
         "fp": normalize_fingerprint(q.get("fp")),
+        "pbk": public_key,
+        "sid": short_id,
         "alpn": alpn_list(q.get("alpn")),
         "insecure": as_bool(q.get("allowInsecure") or q.get("insecure")),
     }

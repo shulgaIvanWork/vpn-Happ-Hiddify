@@ -103,6 +103,31 @@ def test_trojan():
     assert node.params["service_name"] == "svc"
 
 
+def test_trojan_reality():
+    node = parse_uri(
+        "trojan://secret@example.com:443?security=reality&sni=example.com"
+        "&pbk=AgE09mNrPAe9eidpIgw9gVKLC71TgG4L4ctuB3wttiw&sid=aabbccdd&type=tcp#R"
+    )
+    assert node is not None
+    assert node.params["security"] == "reality"
+    assert node.params["pbk"].startswith("AgE0")
+    assert node.params["sid"] == "aabbccdd"
+
+
+def test_trojan_reality_bad_pbk_rejected():
+    assert (
+        parse_uri("trojan://secret@example.com:443?security=reality&pbk=short&type=tcp#bad")
+        is None
+    )
+
+
+def test_invalid_ws_path_rejected():
+    assert (
+        parse_uri(f"vless://{UUID}@example.com:443?type=ws&security=tls&path=/%3...&sni=x#bad")
+        is None
+    )
+
+
 def test_shadowsocks_sip002():
     userinfo = base64.b64encode(b"aes-256-gcm:secret").decode().rstrip("=")
     node = parse_uri(f"ss://{userinfo}@1.2.3.4:8388#SS")

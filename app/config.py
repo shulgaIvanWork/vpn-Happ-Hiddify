@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     batch_size: int = Field(default=70, ge=1, le=200)
     check_timeout: float = Field(default=4.0, gt=0, le=30)
     probe_concurrency: int = Field(default=20, ge=1, le=200)
-    max_nodes_per_scan: int = Field(default=2500, ge=1)
+    port_base: int = Field(default=20000, ge=1024, le=45000)
+    port_band: int = Field(default=3000, ge=200, le=8000)
+    max_nodes_per_scan: int = Field(default=1500, ge=1)
     max_latency_ms: int = Field(default=8000, ge=100)
 
     # --- schedule ---

@@ -4,7 +4,7 @@ import json
 
 from app.models import Node
 
-from .common import alpn_list, as_int, decode_b64, normalize_fingerprint, split_uri
+from .common import alpn_list, as_int, decode_b64, is_valid_path, normalize_fingerprint, split_uri
 
 SECURITY_VALUES = {"auto", "aes-128-gcm", "chacha20-poly1305", "none", "zero"}
 
@@ -46,6 +46,8 @@ def parse(uri: str) -> Node | None:
     host_header = str(data.get("host") or "")
     sni = str(data.get("sni") or "") or host_header or host
     path = str(data.get("path") or "/")
+    if not is_valid_path(path):
+        return None
     service_name = path.strip("/") if network == "grpc" else ""
 
     cipher = str(data.get("scy") or "auto").lower()

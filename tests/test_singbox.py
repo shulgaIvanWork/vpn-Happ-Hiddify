@@ -7,7 +7,7 @@ from app.models import LiveNode
 from app.parsers import parse_uri
 from app.render import display_uri, node_display_name, render_base64, subscription_headers
 from app.singbox import build_check_config, build_subscription_config
-from app.xray import build_xray_config
+from app.xray import build_xray_config, build_xray_outbound
 
 UUID = "bcf31ced-07e7-4bd3-ae6d-9280d9a47834"
 VLESS = (
@@ -57,6 +57,21 @@ def test_xray_config_balancer():
     balancer = config["routing"]["balancers"][0]
     assert balancer["strategy"]["type"] == "leastPing"
     assert config["observatory"]["probeUrl"].endswith("generate_204")
+
+
+def test_xray_skips_insecure_tls():
+    node = parse_uri(f"vless://{UUID}@example.com:443?security=tls&allowInsecure=1&type=tcp#x")
+    assert node is not None
+    assert build_xray_outbound(node) is None
+
+
+def test_xray_rejects_plaintext_public_ip():
+    node = parse_uri(f"vless://{UUID}@1.2.3.4:443?security=none&type=tcp#x")
+    assert node is not None
+    assert build_xray_outbound(node) is None
+    domain = parse_uri(f"vless://{UUID}@example.com:443?security=none&type=tcp#x")
+    assert domain is not None
+    assert build_xray_outbound(domain) is not None
 
 
 def test_base64_subscription_roundtrip():

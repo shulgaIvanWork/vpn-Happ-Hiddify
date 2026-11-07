@@ -78,6 +78,10 @@ async def timing(nodes: list[Node]) -> None:
 
 
 async def main(path: str, limit: int) -> None:
+    import logging
+    import os
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     uris = extract_uris(Path(path).read_text(encoding="utf-8", errors="ignore"))
     nodes = []
     for uri in uris:
@@ -90,7 +94,8 @@ async def main(path: str, limit: int) -> None:
         validate(nodes)
     print()
     count = int(sys.argv[3]) if len(sys.argv) > 3 else 70
-    await timing(nodes[:count])
+    start = int(os.getenv("SLICE_START", "0"))
+    await timing(nodes[start : start + count])
 
 
 if __name__ == "__main__":
