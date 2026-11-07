@@ -98,7 +98,8 @@ def test_happ_subscription_is_json_array_with_failover(client):
     assert isinstance(configs, list) and len(configs) == 1
     config = configs[0]
     assert config["remarks"]
-    assert "inbounds" not in config
+    assert config["inbounds"][0]["protocol"] == "tun"
+    assert config["inbounds"][0]["settings"]["autoSystemRoutingTable"] == ["0.0.0.0/0"]
     tags = [outbound["tag"] for outbound in config["outbounds"]]
     assert "direct" not in tags and "block" not in tags
     assert config["outbounds"][0]["streamSettings"]["security"] in ("tls", "reality")

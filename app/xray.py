@@ -248,19 +248,40 @@ def _happ_allowed(node: Node) -> bool:
     return not node.params.get("insecure")
 
 
+def _happ_tun_inbound() -> dict[str, Any]:
+    """TUN inbound that Xray creates itself when Happ runs the config 1:1."""
+    return {
+        "tag": "tun-in",
+        "protocol": "tun",
+        "settings": {
+            "name": "happ-auto",
+            "desc": "Happ Auto",
+            "mtu": 1500,
+            "gateway": ["10.0.0.1/16"],
+            "dns": ["1.1.1.1", "8.8.8.8"],
+            "autoSystemRoutingTable": ["0.0.0.0/0"],
+            "autoOutboundsInterface": "auto",
+        },
+        "sniffing": {
+            "enabled": True,
+            "destOverride": ["http", "tls", "quic"],
+        },
+    }
+
+
 def build_happ_subscription(nodes: list[Node]) -> list[dict[str, Any]] | None:
     """Happ JSON subscription with client-side automatic failover.
 
-    Happ passes JSON configs to the Xray core unchanged, so the balancer and
-    observatory below keep probing every outbound from the user's own network
-    and switch to a working node even when one of them dies after import.
-    Inbounds are intentionally omitted: Happ injects its own tunnel inbound.
+    Happ passes JSON configs to the Xray core unchanged (no inbound is added),
+    so the config carries its own TUN inbound. The observatory keeps probing
+    every outbound from the user's own network and the leastPing balancer
+    switches to a working node even when one of them dies after import.
     """
     allowed = [node for node in nodes if _happ_allowed(node)]
     config = build_xray_config(allowed)
     if config is None:
         return None
-    config.pop("inbounds", None)
+    config["inbounds"] = [_happ_tun_inbound()]
     config["outbounds"] = [
         outbound for outbound in config["outbounds"] if outbound.get("tag") not in ("direct", "block")
     ]
